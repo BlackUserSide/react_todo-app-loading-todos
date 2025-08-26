@@ -36,6 +36,7 @@ export const App: React.FC = () => {
     setIsLoading(true);
     try {
       const data = await getTodos();
+
       setTodos(data.map(todo => ({ ...todo, loading: false })));
     } catch {
       showError('Unable to load todos');
@@ -45,9 +46,12 @@ export const App: React.FC = () => {
   };
 
   useEffect(() => {
-    if (!USER_ID) return;
+    if (!USER_ID) {
+      return;
+    }
+
     loadTodos();
-  }, []);
+  }, [loadTodos]);
 
   const visibleTodos = useMemo(() => {
     switch (filter) {
@@ -62,17 +66,21 @@ export const App: React.FC = () => {
 
   const activeCount = useMemo(
     () => todos.filter(t => !t.completed).length,
-    [todos]
+    [todos],
   );
 
   const allCompleted = todos.length > 0 && activeCount === 0;
 
   const handleAddTodo = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTitle.trim()) return;
+    if (!newTitle.trim()) {
+      return;
+    }
+
     setIsAdding(true);
     try {
       const newTodo = await createTodo(newTitle.trim());
+
       setTodos(prev => [...prev, { ...newTodo, loading: false }]);
       setNewTitle('');
     } catch {
@@ -84,18 +92,14 @@ export const App: React.FC = () => {
 
   const handleDelete = async (id: number) => {
     setTodos(prev =>
-      prev.map(todo =>
-        todo.id === id ? { ...todo, loading: true } : todo
-      )
+      prev.map(todo => (todo.id === id ? { ...todo, loading: true } : todo)),
     );
     try {
       await deleteTodo(id);
       setTodos(prev => prev.filter(todo => todo.id !== id));
     } catch {
       setTodos(prev =>
-        prev.map(todo =>
-          todo.id === id ? { ...todo, loading: false } : todo
-        )
+        prev.map(todo => (todo.id === id ? { ...todo, loading: false } : todo)),
       );
       showError('Unable to delete a todo');
     }
@@ -103,22 +107,19 @@ export const App: React.FC = () => {
 
   const handleToggle = async (id: number, completed: boolean) => {
     setTodos(prev =>
-      prev.map(todo =>
-        todo.id === id ? { ...todo, loading: true } : todo
-      )
+      prev.map(todo => (todo.id === id ? { ...todo, loading: true } : todo)),
     );
     try {
       const updated = await updateTodo(id, { completed: !completed });
+
       setTodos(prev =>
         prev.map(todo =>
-          todo.id === id ? { ...updated, loading: false } : todo
-        )
+          todo.id === id ? { ...updated, loading: false } : todo,
+        ),
       );
     } catch {
       setTodos(prev =>
-        prev.map(todo =>
-          todo.id === id ? { ...todo, loading: false } : todo
-        )
+        prev.map(todo => (todo.id === id ? { ...todo, loading: false } : todo)),
       );
       showError('Unable to update a todo');
     }
@@ -127,27 +128,26 @@ export const App: React.FC = () => {
   const handleRename = async (id: number) => {
     if (!editingTitle.trim()) {
       await handleDelete(id);
+
       return;
     }
+
     setTodos(prev =>
-      prev.map(todo =>
-        todo.id === id ? { ...todo, loading: true } : todo
-      )
+      prev.map(todo => (todo.id === id ? { ...todo, loading: true } : todo)),
     );
     try {
       const updated = await updateTodo(id, { title: editingTitle.trim() });
+
       setTodos(prev =>
         prev.map(todo =>
-          todo.id === id ? { ...updated, loading: false } : todo
-        )
+          todo.id === id ? { ...updated, loading: false } : todo,
+        ),
       );
       setEditingId(null);
       setEditingTitle('');
     } catch {
       setTodos(prev =>
-        prev.map(todo =>
-          todo.id === id ? { ...todo, loading: false } : todo
-        )
+        prev.map(todo => (todo.id === id ? { ...todo, loading: false } : todo)),
       );
       showError('Unable to update a todo');
     }
