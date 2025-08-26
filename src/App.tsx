@@ -51,7 +51,7 @@ export const App: React.FC = () => {
     }
 
     loadTodos();
-  }, [loadTodos]);
+  }, []);
 
   const visibleTodos = useMemo(() => {
     switch (filter) {
