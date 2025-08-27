@@ -1,6 +1,12 @@
 /* eslint-disable jsx-a11y/label-has-associated-control */
 /* eslint-disable jsx-a11y/control-has-associated-label */
-import React, { useEffect, useMemo, useState } from 'react';
+import React, {
+  useEffect,
+  useMemo,
+  useState,
+  useCallback,
+  useRef,
+} from 'react';
 import { UserWarning } from './UserWarning';
 import {
   getTodos,
@@ -23,6 +29,7 @@ export const App: React.FC = () => {
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editingTitle, setEditingTitle] = useState('');
+  const didFetch = useRef(false);
 
   const showError = (message: string) => {
     setError(message);
@@ -30,28 +37,26 @@ export const App: React.FC = () => {
     setTimeout(() => setIsErrorVisible(false), 3000);
   };
 
-  const loadTodos = async () => {
-    setIsErrorVisible(false);
-    setError(null);
+  const loadTodos = useCallback(async () => {
+    if (isLoading) return;
     setIsLoading(true);
+    setError(null);
+    setIsErrorVisible(false);
     try {
       const data = await getTodos();
-
       setTodos(data.map(todo => ({ ...todo, loading: false })));
     } catch {
       showError('Unable to load todos');
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [isLoading]);
 
   useEffect(() => {
-    if (!USER_ID) {
-      return;
-    }
-
+    if (!USER_ID || didFetch.current) return;
+    didFetch.current = true;
     loadTodos();
-  }, []);
+  }, [loadTodos]);
 
   const visibleTodos = useMemo(() => {
     switch (filter) {
@@ -66,21 +71,17 @@ export const App: React.FC = () => {
 
   const activeCount = useMemo(
     () => todos.filter(t => !t.completed).length,
-    [todos],
+    [todos]
   );
 
   const allCompleted = todos.length > 0 && activeCount === 0;
 
   const handleAddTodo = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTitle.trim()) {
-      return;
-    }
-
+    if (!newTitle.trim()) return;
     setIsAdding(true);
     try {
       const newTodo = await createTodo(newTitle.trim());
-
       setTodos(prev => [...prev, { ...newTodo, loading: false }]);
       setNewTitle('');
     } catch {
@@ -92,14 +93,14 @@ export const App: React.FC = () => {
 
   const handleDelete = async (id: number) => {
     setTodos(prev =>
-      prev.map(todo => (todo.id === id ? { ...todo, loading: true } : todo)),
+      prev.map(todo => (todo.id === id ? { ...todo, loading: true } : todo))
     );
     try {
       await deleteTodo(id);
       setTodos(prev => prev.filter(todo => todo.id !== id));
     } catch {
       setTodos(prev =>
-        prev.map(todo => (todo.id === id ? { ...todo, loading: false } : todo)),
+        prev.map(todo => (todo.id === id ? { ...todo, loading: false } : todo))
       );
       showError('Unable to delete a todo');
     }
@@ -107,19 +108,18 @@ export const App: React.FC = () => {
 
   const handleToggle = async (id: number, completed: boolean) => {
     setTodos(prev =>
-      prev.map(todo => (todo.id === id ? { ...todo, loading: true } : todo)),
+      prev.map(todo => (todo.id === id ? { ...todo, loading: true } : todo))
     );
     try {
       const updated = await updateTodo(id, { completed: !completed });
-
       setTodos(prev =>
         prev.map(todo =>
-          todo.id === id ? { ...updated, loading: false } : todo,
-        ),
+          todo.id === id ? { ...updated, loading: false } : todo
+        )
       );
     } catch {
       setTodos(prev =>
-        prev.map(todo => (todo.id === id ? { ...todo, loading: false } : todo)),
+        prev.map(todo => (todo.id === id ? { ...todo, loading: false } : todo))
       );
       showError('Unable to update a todo');
     }
@@ -128,26 +128,23 @@ export const App: React.FC = () => {
   const handleRename = async (id: number) => {
     if (!editingTitle.trim()) {
       await handleDelete(id);
-
       return;
     }
-
     setTodos(prev =>
-      prev.map(todo => (todo.id === id ? { ...todo, loading: true } : todo)),
+      prev.map(todo => (todo.id === id ? { ...todo, loading: true } : todo))
     );
     try {
       const updated = await updateTodo(id, { title: editingTitle.trim() });
-
       setTodos(prev =>
         prev.map(todo =>
-          todo.id === id ? { ...updated, loading: false } : todo,
-        ),
+          todo.id === id ? { ...updated, loading: false } : todo
+        )
       );
       setEditingId(null);
       setEditingTitle('');
     } catch {
       setTodos(prev =>
-        prev.map(todo => (todo.id === id ? { ...todo, loading: false } : todo)),
+        prev.map(todo => (todo.id === id ? { ...todo, loading: false } : todo))
       );
       showError('Unable to update a todo');
     }
@@ -160,7 +157,6 @@ export const App: React.FC = () => {
   return (
     <div className="todoapp">
       <h1 className="todoapp__title">todos</h1>
-
       <div className="todoapp__content">
         <header className="todoapp__header">
           <button
@@ -181,7 +177,6 @@ export const App: React.FC = () => {
             />
           </form>
         </header>
-
         {!isLoading && visibleTodos.length > 0 && (
           <section className="todoapp__main" data-cy="TodoList">
             {visibleTodos.map(todo => (
@@ -200,7 +195,6 @@ export const App: React.FC = () => {
                     disabled={todo.loading}
                   />
                 </label>
-
                 {editingId === todo.id ? (
                   <form
                     onSubmit={e => {
@@ -231,7 +225,6 @@ export const App: React.FC = () => {
                     {todo.title}
                   </span>
                 )}
-
                 <button
                   type="button"
                   className="todo__remove"
@@ -241,7 +234,6 @@ export const App: React.FC = () => {
                 >
                   ×
                 </button>
-
                 <div
                   data-cy="TodoLoader"
                   className={`modal overlay ${todo.loading ? 'is-active' : ''}`}
@@ -253,13 +245,11 @@ export const App: React.FC = () => {
             ))}
           </section>
         )}
-
         {todos.length > 0 && (
           <footer className="todoapp__footer" data-cy="Footer">
             <span className="todo-count" data-cy="TodosCounter">
               {activeCount} items left
             </span>
-
             <nav className="filter" data-cy="Filter">
               <a
                 href="#/"
@@ -272,7 +262,6 @@ export const App: React.FC = () => {
               >
                 All
               </a>
-
               <a
                 href="#/active"
                 className={`filter__link ${
@@ -286,7 +275,6 @@ export const App: React.FC = () => {
               >
                 Active
               </a>
-
               <a
                 href="#/completed"
                 className={`filter__link ${
@@ -301,7 +289,6 @@ export const App: React.FC = () => {
                 Completed
               </a>
             </nav>
-
             <button
               type="button"
               className="todoapp__clear-completed"
@@ -318,7 +305,6 @@ export const App: React.FC = () => {
           </footer>
         )}
       </div>
-
       <div
         data-cy="ErrorNotification"
         className={`notification is-danger is-light has-text-weight-normal ${
